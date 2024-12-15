@@ -1,0 +1,75 @@
+#include <ESP8266WiFi.h>
+#include <Servo.h>
+
+// Define the pins
+#define trigPin D6
+#define echoPin D5
+#define servoPin D2
+#define buzzerPin D1  // Buzzer pin
+#define flamePin D0   // Flame sensor pin
+
+// Create Servo object
+Servo myServo;
+
+// Set up variables for distance measurement
+long duration;
+int distance;
+
+void setup() {
+  // Initialize the serial communication
+  Serial.begin(115200);
+
+  // Set the trigPin as output, echoPin as input, buzzerPin and flamePin as input/output
+  pinMode(trigPin, OUTPUT);
+  pinMode(echoPin, INPUT);
+  pinMode(buzzerPin, OUTPUT);
+  pinMode(flamePin, INPUT);  // Flame sensor pin as input
+
+  // Attach the servo motor to the defined pin
+  myServo.attach(servoPin);
+
+  // Initially set the door (servo) to locked position (closed)
+  myServo.write(90);  // 0 degrees (locked)
+  digitalWrite(buzzerPin, LOW); // Ensure buzzer is off initially
+}
+
+void loop() {
+  // Send a pulse to the ultrasonic sensor to measure distance
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(2);
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin, LOW);
+
+  // Measure the pulse duration
+  duration = pulseIn(echoPin, HIGH);
+
+  // Calculate the distance (in cm)
+  distance = (duration / 2) / 29.1;
+
+  // Read the state of the flame sensor
+  int flameState = digitalRead(flamePin);  // HIGH when no flame, LOW when flame is detected
+
+  // Print distance and flame sensor state to Serial Monitor for debugging
+  Serial.print("Distance: ");
+  Serial.print(distance);
+  Serial.print(" cm, Flame Detected: ");
+  Serial.println(flameState == LOW ? "YES" : "NO");
+
+  // If flame is detected or object is close (less than 30 cm), open the door and activate buzzer
+  if (flameState == LOW || distance < 30) {
+    // Open the door (servo to 0 degrees)
+    myServo.write(0);  // 0 degrees (open)
+
+    // Turn on the buzzer
+    digitalWrite(buzzerPin, HIGH);  // Buzzer on
+  } else {
+    // Lock the door (servo to 90 degrees)
+    myServo.write(90);  // 90 degrees (locked)
+
+    // Turn off the buzzer
+    digitalWrite(buzzerPin, LOW);  // Buzzer off
+  }
+
+  delay(500); // Delay for stability
+}
